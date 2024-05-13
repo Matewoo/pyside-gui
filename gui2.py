@@ -6,46 +6,42 @@ from PySide6.QtWidgets import QWidget, QFileDialog, QFrame
 from PySide6.QtWidgets import QMainWindow, QMessageBox, QVBoxLayout, QPushButton
 import sys
 
-# Our own widget type (for later) 
 class MyPaintArea(QWidget): 
     def __init__(self, parent: QWidget): 
-        super().__init__(parent) 
-        self.setMinimumWidth(640) # Größe des neuen Widgets muss man  
-        self.setMinimumHeight(480) # unbedingt selbst einstellen! 
-        self.image: QImage = QImage(640, 480, QImage.Format_RGB32) # 640x480pix 
-        self.image.fill(QColor(255, 255, 255)) # mit weiß löschen 
-        # ... man braucht sicher noch mehr ;-) ... 
- 
-    # Diese Methode wird immer aufgerufen, wenn das GUI-Element auf dem Bild- 
-    # schirm dargestellt warden soll. Man programmiert hier, wie es sich 
-    # "selbst zeichnen" soll. Einfach mal ausprobieren! 
-    def paintEvent(self, event): 
-        painter: QPainter = QPainter(self) 
-        # hier kann man nun auf das Widget zeichnen 
-        # Sinnvoll ist z.B.  
-        # painter.drawImage(<x-Koord: int>., <y-Koord: int>., <ein QImage>) 
-        # oder zum Testen painter.fillRect(…), drawLine(…) o.ä. 
-        # (siehe Doku der Klasse QPainter in PySide6) 
- 
-    # Diese Methode wird jedes Mal aufgerufen, wenn die Maus über unserem 
-    # GUI-Element gedrückt wird 
-    def mousePressEvent(self, event): 
-        # Mit einer solchen Abfrage kann man überprüfen, welcher Knopf es war 
+        super().__init__(parent)
+
+        self.setMinimumWidth(640)
+        self.setMinimumHeight(480)
+        self.image: QImage = QImage(640, 480, QImage.Format_RGB32)
+        self.image.fill(QColor(255, 255, 255))
+        self.drawing = False
+
+    def load_image(self, filename):
+        self.image = QImage(filename)
+        self.update()
+
+    def paintEvent(self, event):
+        painter: QPainter = QPainter(self)
+        painter.drawImage(0, 0, self.image)
+
+    def mousePressEvent(self, event):
+        painter = QPainter(self.image)
         if event.button() == Qt.MouseButtons.LeftButton: 
-            print("Left mouse button pressed")
-            # ... 
- 
-    # Hier das gleiche für das Loslassen von Maustasten 
+            self.drawing = True
+            self.lastPoint = event.pos()
+            painter.drawPoint(event.pos())
+            self.update()
+
     def mouseReleaseEvent(self, event):
-        print("Mouse released")
-    # ... 
-    # Und diese Methode wird aufgerufen, falls die Maus über unserem 
-    # GUI-Element bewegt wird. Achtung: Man muss natürlich prüfen, ob die 
-    # Taste gedrückt wurde... 
+        if event.button() == Qt.MouseButtons.LeftButton:
+            self.drawing = False
+
     def mouseMoveEvent(self, event):
-        print("Mouse moved")
- 
- 
+        if (event.buttons() and Qt.MouseButtons.LeftButton) and self.drawing:
+            painter = QPainter(self.image)
+            painter.drawLine(self.lastPoint, event.pos())
+            self.lastPoint = event.pos()
+            self.update()
 # Our own Main Window type 
 class MyWindow(QMainWindow): 
 
@@ -63,11 +59,18 @@ class MyWindow(QMainWindow):
     def show_info(self):
         QMessageBox.information(self, "Info", "This is a simple text editor.", QMessageBox.Ok)
 
+    def load_file(self):
+        file_name, selected_filter = QFileDialog.getOpenFileName(self, "Open Image", "", "PNG Files (*.png)")
+        if file_name:  # make sure a file name was selected
+            self.paint_area.load_image(file_name)
 
-
+    def save_file(self):
+        file_name, selected_filter = QFileDialog.getSaveFileName(self, "Save As", "picture", "PNG Files (*.png)") 
+        if file_name:  # make sure a file name was selected
+            self.paint_area.image.save(file_name) 
 
     def __init__(self, parent: QWidget): 
-        # call parent constructor (required for QMainWindow) 
+
         super().__init__(parent) 
 
         self.paint_area: MyPaintArea = MyPaintArea(self)
@@ -97,6 +100,8 @@ class MyWindow(QMainWindow):
         self.info_action = self.help_menu.addAction("Info") 
         self.info_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_I)) 
 
+        self.open_action.triggered.connect(self.load_file)
+        self.saveAs_action.triggered.connect(self.save_file)
         self.info_action.triggered.connect(self.show_info)
 
         self.quit_action.triggered.connect(self.show_quit_warning)
@@ -104,8 +109,8 @@ class MyWindow(QMainWindow):
 
 
         self.nice_toolbar: QToolBar = self.addToolBar("Some Nice Tools")
-        self.nice_toolbar.addAction("Open")
-        self.nice_toolbar.addAction("Save")
+        self.nice_toolbar.addAction("Open", self.load_file)
+        self.nice_toolbar.addAction("Save", self.save_file)
         self.nice_toolbar.addAction("Info", self.show_info)
         self.nice_toolbar.addAction("Quit", self.show_quit_warning)
 
