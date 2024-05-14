@@ -50,14 +50,14 @@ class MyWindow(QMainWindow):
 
     def show_quit_warning(self):
         # open a simple dialog window to say hello
-        ret = QMessageBox.question(self, "ALARM!", "Möchtest Du das Programm wirklich schließen? :(", QMessageBox.Yes, QMessageBox.No)
+        ret = QMessageBox.question(self, "Ufpasse!", "Möchtest Du das Programm wirklich schließen? :(", QMessageBox.Yes, QMessageBox.No)
         if ret == QMessageBox.Yes:
             self.close()
         else:
             print("Programm wird fortgesetzt")
     
     def show_info(self):
-        QMessageBox.information(self, "Info", "This is a simple text editor.", QMessageBox.Ok)
+        QMessageBox.information(self, "Info", "Eine super nützliche Information...", QMessageBox.Ok)
 
     def load_file(self):
         file_name, selected_filter = QFileDialog.getOpenFileName(self, "Open Image", "", "PNG Files (*.png)")
